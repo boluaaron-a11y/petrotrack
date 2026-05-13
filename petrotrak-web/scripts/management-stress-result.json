@@ -1,0 +1,14 @@
+﻿{
+    "iterations":  6,
+    "requestDelayMs":  2200,
+    "max429Retries":  2,
+    "passed":  5,
+    "failed":  1,
+    "failureRate":  16.67,
+    "sampleFailures":  {
+                           "iteration":  4,
+                           "step":  "create_branch",
+                           "error":  "HTTP 502 :: ",
+                           "branchCode":  "stress-4-1773248194033"
+                       }
+}

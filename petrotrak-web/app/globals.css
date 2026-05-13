@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+:root {
+  --background: #edf2ec;
+  --foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-manrope);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.card {
+  border: 1px solid #dfe5dd;
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 0.75rem;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field > span {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid #d9e1d6;
+  background: #ffffff;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.input:focus {
+  outline: 2px solid #b6d9b0;
+  outline-offset: 1px;
+}
+
+.theme-dark .card {
+  border-color: #334155;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.theme-dark .header-card {
+  border-color: #334155;
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+}
+
+.theme-dark .header-action-btn {
+  border-color: #475569;
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.theme-dark .text-emerald-700 {
+  color: #6ee7b7;
+}
+
+.theme-dark .text-slate-600,
+.theme-dark .text-slate-500,
+.theme-dark .text-slate-300 {
+  color: #94a3b8;
+}
+
+.theme-dark .bg-slate-50 {
+  background: #1e293b;
+}
+
+.theme-dark .bg-slate-100 {
+  background: #111827;
+}
+
+.theme-dark .bg-sky-50 {
+  background: #172554;
+}
+
+.theme-dark .bg-emerald-50 {
+  background: #052e2b;
+}
+
+.theme-dark .bg-indigo-50 {
+  background: #1e1b4b;
+}
+
+.theme-dark .text-indigo-700 {
+  color: #c7d2fe;
+}
+
+.theme-dark .field > span {
+  color: #94a3b8;
+}
+
+.theme-dark .input {
+  border-color: #334155;
+  background: #111827;
+  color: #f8fafc;
+}
+
+.theme-dark .input:focus {
+  outline-color: #64748b;
+}
