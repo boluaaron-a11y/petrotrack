@@ -135,7 +135,7 @@ export default function Home() {
 
   const totalReceived = cashTotal + toNumber(posAmount) + toNumber(bankTransferAmount);
   const totalOutstanding = creditTotal;
-  const totalDeductions = toNumber(posAmount) + expensesTotal + creditTotal;
+  const totalDeductions = toNumber(posAmount) + toNumber(bankTransferAmount) + expensesTotal + creditTotal;
 
   const addCreditSale = () => {
     setCreditSales((prev) => [...prev, { id: createRowId("credit"), clientName: "", amountStr: "0" }]);
@@ -486,10 +486,14 @@ export default function Home() {
 
         <section className="rounded-2xl bg-slate-900 p-4 text-slate-50">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Deductions</p>
-          <div className="mb-3 grid grid-cols-3 gap-2">
+          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-lg bg-white/10 p-2 text-center">
               <p className="text-[11px] text-slate-400">POS</p>
               <p className="text-sm font-bold">{formatCurrency(toNumber(posAmount))}</p>
+            </div>
+            <div className="rounded-lg bg-white/10 p-2 text-center">
+              <p className="text-[11px] text-slate-400">Bank</p>
+              <p className="text-sm font-bold">{formatCurrency(toNumber(bankTransferAmount))}</p>
             </div>
             <div className="rounded-lg bg-white/10 p-2 text-center">
               <p className="text-[11px] text-slate-400">Expenses</p>
