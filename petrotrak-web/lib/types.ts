@@ -40,8 +40,11 @@ export type ShiftEntryRecord = {
     quantitySold: number;
     expectedIncome: number;
     cashTotal: number;
+    electronicCashTotal?: number;
     totalReceived: number;
+    expensesTotal?: number;
     creditTotal: number;
+    totalDeductions?: number;
     totalOutstanding: number;
   };
 };
@@ -65,8 +68,11 @@ export type ShiftEntryPayload = {
     quantitySold: number;
     expectedIncome: number;
     cashTotal: number;
+    electronicCashTotal: number;
     totalReceived: number;
+    expensesTotal: number;
     creditTotal: number;
+    totalDeductions: number;
     totalOutstanding: number;
   };
 };

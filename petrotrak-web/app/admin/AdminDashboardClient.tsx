@@ -44,9 +44,10 @@ function SectionTable({
     (acc, e) => ({
       expectedIncome: acc.expectedIncome + (e.computed?.expectedIncome ?? 0),
       cashTotal: acc.cashTotal + (e.computed?.cashTotal ?? 0),
-      posAmount: acc.posAmount + (e.pos_amount ?? 0),
+      electronicCashTotal: acc.electronicCashTotal + (e.computed?.electronicCashTotal ?? (e.pos_amount ?? 0) + (e.bank_transfer_amount ?? 0)),
+      totalDeductions: acc.totalDeductions + (e.computed?.totalDeductions ?? (e.computed?.creditTotal ?? 0) + (e.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0)),
     }),
-    { expectedIncome: 0, cashTotal: 0, posAmount: 0 },
+    { expectedIncome: 0, cashTotal: 0, electronicCashTotal: 0, totalDeductions: 0 },
   );
 
   return (
@@ -68,9 +69,10 @@ function SectionTable({
                 <th className="px-4 py-3 text-left">Pump #</th>
                 <th className="px-4 py-3 text-left">Attendant</th>
                 <th className="px-4 py-3 text-left">Shift</th>
-                <th className="px-4 py-3 text-right">Expected Income</th>
-                <th className="px-4 py-3 text-right">Actual Cash</th>
-                <th className="px-4 py-3 text-right">POS</th>
+                <th className="px-4 py-3 text-right">Sales Made</th>
+                <th className="px-4 py-3 text-right">Cash Remitted</th>
+                <th className="px-4 py-3 text-right">Electronic Cash</th>
+                <th className="px-4 py-3 text-right">Deductions</th>
                 <th className="px-4 py-3 text-right">Variance</th>
               </tr>
             </thead>
@@ -81,8 +83,9 @@ function SectionTable({
                 .map((entry) => {
                   const expected = entry.computed?.expectedIncome ?? 0;
                   const cash = entry.computed?.cashTotal ?? 0;
-                  const pos = entry.pos_amount ?? 0;
-                  const totalCollected = cash + pos;
+                  const electronicCash = entry.computed?.electronicCashTotal ?? (entry.pos_amount ?? 0) + (entry.bank_transfer_amount ?? 0);
+                  const totalDeductions = entry.computed?.totalDeductions ?? (entry.computed?.creditTotal ?? 0) + (entry.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0);
+                  const totalCollected = cash + electronicCash;
                   const variance = totalCollected - expected;
                   const isPositive = variance >= 0;
 
@@ -102,7 +105,8 @@ function SectionTable({
                       <td className="px-4 py-3 capitalize text-slate-500">{entry.shift}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatCurrency(expected)}</td>
                       <td className="px-4 py-3 text-right">{formatCurrency(cash)}</td>
-                      <td className="px-4 py-3 text-right">{formatCurrency(pos)}</td>
+                      <td className="px-4 py-3 text-right">{formatCurrency(electronicCash)}</td>
+                      <td className="px-4 py-3 text-right text-amber-700">{formatCurrency(totalDeductions)}</td>
                       <td className={`px-4 py-3 text-right font-semibold ${isPositive ? "text-emerald-600" : "text-rose-500"}`}>
                         {isPositive ? "+" : ""}
                         {formatCurrency(variance)}
@@ -116,9 +120,10 @@ function SectionTable({
                 <td colSpan={3} className="px-4 py-3 text-xs uppercase text-slate-500">Section Total</td>
                 <td className="px-4 py-3 text-right text-slate-800">{formatCurrency(totals.expectedIncome)}</td>
                 <td className="px-4 py-3 text-right text-slate-800">{formatCurrency(totals.cashTotal)}</td>
-                <td className="px-4 py-3 text-right text-slate-800">{formatCurrency(totals.posAmount)}</td>
-                <td className={`px-4 py-3 text-right ${totals.cashTotal + totals.posAmount >= totals.expectedIncome ? "text-emerald-600" : "text-rose-500"}`}>
-                  {formatCurrency(totals.cashTotal + totals.posAmount - totals.expectedIncome)}
+                <td className="px-4 py-3 text-right text-slate-800">{formatCurrency(totals.electronicCashTotal)}</td>
+                <td className="px-4 py-3 text-right text-amber-700">{formatCurrency(totals.totalDeductions)}</td>
+                <td className={`px-4 py-3 text-right ${totals.cashTotal + totals.electronicCashTotal >= totals.expectedIncome ? "text-emerald-600" : "text-rose-500"}`}>
+                  {formatCurrency(totals.cashTotal + totals.electronicCashTotal - totals.expectedIncome)}
                 </td>
               </tr>
             </tfoot>
@@ -246,7 +251,7 @@ export default function AdminDashboardClient() {
     const totals = records.reduce(
       (acc, e) => ({
         expectedIncome: acc.expectedIncome + (e.computed?.expectedIncome ?? 0),
-        collected: acc.collected + (e.computed?.cashTotal ?? 0) + (e.pos_amount ?? 0),
+        collected: acc.collected + (e.computed?.cashTotal ?? 0) + (e.computed?.electronicCashTotal ?? (e.pos_amount ?? 0) + (e.bank_transfer_amount ?? 0)),
       }),
       { expectedIncome: 0, collected: 0 },
     );
@@ -266,11 +271,11 @@ export default function AdminDashboardClient() {
     (acc, e) => ({
       expectedIncome: acc.expectedIncome + (e.computed?.expectedIncome ?? 0),
       cashTotal: acc.cashTotal + (e.computed?.cashTotal ?? 0),
-      posAmount: acc.posAmount + (e.pos_amount ?? 0),
+      electronicCashTotal: acc.electronicCashTotal + (e.computed?.electronicCashTotal ?? (e.pos_amount ?? 0) + (e.bank_transfer_amount ?? 0)),
     }),
-    { expectedIncome: 0, cashTotal: 0, posAmount: 0 },
+    { expectedIncome: 0, cashTotal: 0, electronicCashTotal: 0 },
   );
-  const grandCollected = grandTotals.cashTotal + grandTotals.posAmount;
+  const grandCollected = grandTotals.cashTotal + grandTotals.electronicCashTotal;
   const grandVariance = grandCollected - grandTotals.expectedIncome;
 
   const paymentMix = entries.reduce(
@@ -359,7 +364,7 @@ export default function AdminDashboardClient() {
       const pos = entry.pos_amount ?? 0;
       const bank = entry.bank_transfer_amount ?? 0;
       const credit = entry.computed?.creditTotal ?? 0;
-      const variance = cash + pos - expected;
+      const variance = cash + pos + bank - expected;
       return [
         entry.date,
         entry.station,

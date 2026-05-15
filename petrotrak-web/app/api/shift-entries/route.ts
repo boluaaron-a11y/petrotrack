@@ -34,7 +34,10 @@ function sanitizePayload(input: ShiftEntryPayload): ShiftEntryPayload {
   const expectedIncome = computeExpectedIncome(quantitySold, pricePerLiter);
   const cashTotal = computeCashTotal(normalizedCashCounts);
   const creditTotal = computeCreditAmounts(creditSales).reduce((sum, amount) => sum + amount, 0);
-  const totalReceived = cashTotal + toNonNegativeNumber(input.posAmount) + toNonNegativeNumber(input.bankTransferAmount);
+  const expensesTotal = expenses.reduce((sum, entry) => sum + entry.amount, 0);
+  const electronicCashTotal = toNonNegativeNumber(input.posAmount) + toNonNegativeNumber(input.bankTransferAmount);
+  const totalReceived = cashTotal + electronicCashTotal;
+  const totalDeductions = expensesTotal + creditTotal;
 
   return {
     ...input,
@@ -51,8 +54,11 @@ function sanitizePayload(input: ShiftEntryPayload): ShiftEntryPayload {
       quantitySold,
       expectedIncome,
       cashTotal,
+      electronicCashTotal,
       totalReceived,
+      expensesTotal,
       creditTotal,
+      totalDeductions,
       totalOutstanding: creditTotal,
     },
   };

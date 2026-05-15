@@ -133,9 +133,10 @@ export default function Home() {
     [expenses],
   );
 
-  const totalReceived = cashTotal + toNumber(posAmount) + toNumber(bankTransferAmount);
+  const electronicCashTotal = toNumber(posAmount) + toNumber(bankTransferAmount);
+  const totalReceived = cashTotal + electronicCashTotal;
   const totalOutstanding = creditTotal;
-  const totalDeductions = toNumber(posAmount) + toNumber(bankTransferAmount) + expensesTotal + creditTotal;
+  const totalDeductions = expensesTotal + creditTotal;
 
   const addCreditSale = () => {
     setCreditSales((prev) => [...prev, { id: createRowId("credit"), clientName: "", amountStr: "0" }]);
@@ -174,8 +175,11 @@ export default function Home() {
         quantitySold,
         expectedIncome,
         cashTotal,
+        electronicCashTotal,
         totalReceived,
+        expensesTotal,
         creditTotal,
+        totalDeductions,
         totalOutstanding,
       },
     };
@@ -485,28 +489,34 @@ export default function Home() {
         </section>
 
         <section className="rounded-2xl bg-slate-900 p-4 text-slate-50">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Deductions</p>
-          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Shift Summary</p>
+          <div className="mb-3 grid grid-cols-2 gap-2">
             <div className="rounded-lg bg-white/10 p-2 text-center">
-              <p className="text-[11px] text-slate-400">POS</p>
-              <p className="text-sm font-bold">{formatCurrency(toNumber(posAmount))}</p>
+              <p className="text-[11px] text-slate-400">Sales Made</p>
+              <p className="text-sm font-bold">{formatCurrency(expectedIncome)}</p>
             </div>
             <div className="rounded-lg bg-white/10 p-2 text-center">
-              <p className="text-[11px] text-slate-400">Bank</p>
-              <p className="text-sm font-bold">{formatCurrency(toNumber(bankTransferAmount))}</p>
+              <p className="text-[11px] text-slate-400">Cash Remitted</p>
+              <p className="text-sm font-bold">{formatCurrency(cashTotal)}</p>
             </div>
             <div className="rounded-lg bg-white/10 p-2 text-center">
-              <p className="text-[11px] text-slate-400">Expenses</p>
-              <p className="text-sm font-bold">{formatCurrency(expensesTotal)}</p>
+              <p className="text-[11px] text-slate-400">Electronic Cash</p>
+              <p className="text-sm font-bold">{formatCurrency(electronicCashTotal)}</p>
             </div>
             <div className="rounded-lg bg-white/10 p-2 text-center">
-              <p className="text-[11px] text-slate-400">Credit</p>
-              <p className="text-sm font-bold">{formatCurrency(creditTotal)}</p>
+              <p className="text-[11px] text-slate-400">Deductions</p>
+              <p className="text-sm font-bold text-amber-200">{formatCurrency(totalDeductions)}</p>
             </div>
           </div>
-          <div className="mb-4 rounded-lg bg-white/10 p-3">
-            <p className="text-[11px] text-slate-400">Total Deductions</p>
-            <p className="text-xl font-bold text-amber-300">{formatCurrency(totalDeductions)}</p>
+          <div className="mb-4 grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-white/10 p-3">
+              <p className="text-[11px] text-slate-400">Credit</p>
+              <p className="text-lg font-bold text-rose-200">{formatCurrency(creditTotal)}</p>
+            </div>
+            <div className="rounded-lg bg-white/10 p-3">
+              <p className="text-[11px] text-slate-400">Expenses</p>
+              <p className="text-lg font-bold text-rose-200">{formatCurrency(expensesTotal)}</p>
+            </div>
           </div>
           <p className="text-xs text-slate-300">Total Received</p>
           <p className="mb-2 text-2xl font-bold">{formatCurrency(totalReceived)}</p>
