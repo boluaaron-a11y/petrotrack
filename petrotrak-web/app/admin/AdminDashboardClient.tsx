@@ -85,8 +85,7 @@ function SectionTable({
                   const cash = entry.computed?.cashTotal ?? 0;
                   const electronicCash = entry.computed?.electronicCashTotal ?? (entry.pos_amount ?? 0) + (entry.bank_transfer_amount ?? 0);
                   const totalDeductions = entry.computed?.totalDeductions ?? (entry.computed?.creditTotal ?? 0) + (entry.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0);
-                  const totalCollected = cash + electronicCash;
-                  const variance = totalCollected - expected;
+                  const variance = entry.computed?.reconciliationDifference ?? cash + electronicCash + totalDeductions - expected;
                   const isPositive = variance >= 0;
 
                   return (
@@ -252,15 +251,17 @@ export default function AdminDashboardClient() {
       (acc, e) => ({
         expectedIncome: acc.expectedIncome + (e.computed?.expectedIncome ?? 0),
         collected: acc.collected + (e.computed?.cashTotal ?? 0) + (e.computed?.electronicCashTotal ?? (e.pos_amount ?? 0) + (e.bank_transfer_amount ?? 0)),
+        deductions: acc.deductions + (e.computed?.totalDeductions ?? (e.computed?.creditTotal ?? 0) + (e.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0)),
+        variance: acc.variance + (e.computed?.reconciliationDifference ?? (e.computed?.cashTotal ?? 0) + (e.computed?.electronicCashTotal ?? (e.pos_amount ?? 0) + (e.bank_transfer_amount ?? 0)) + (e.computed?.totalDeductions ?? (e.computed?.creditTotal ?? 0) + (e.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0)) - (e.computed?.expectedIncome ?? 0)),
       }),
-      { expectedIncome: 0, collected: 0 },
+      { expectedIncome: 0, collected: 0, deductions: 0, variance: 0 },
     );
 
     return {
       pumps: records.length,
       expectedIncome: totals.expectedIncome,
       collected: totals.collected,
-      variance: totals.collected - totals.expectedIncome,
+      variance: totals.variance,
     };
   };
 
@@ -272,11 +273,13 @@ export default function AdminDashboardClient() {
       expectedIncome: acc.expectedIncome + (e.computed?.expectedIncome ?? 0),
       cashTotal: acc.cashTotal + (e.computed?.cashTotal ?? 0),
       electronicCashTotal: acc.electronicCashTotal + (e.computed?.electronicCashTotal ?? (e.pos_amount ?? 0) + (e.bank_transfer_amount ?? 0)),
+      totalDeductions: acc.totalDeductions + (e.computed?.totalDeductions ?? (e.computed?.creditTotal ?? 0) + (e.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0)),
+      variance: acc.variance + (e.computed?.reconciliationDifference ?? (e.computed?.cashTotal ?? 0) + (e.computed?.electronicCashTotal ?? (e.pos_amount ?? 0) + (e.bank_transfer_amount ?? 0)) + (e.computed?.totalDeductions ?? (e.computed?.creditTotal ?? 0) + (e.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0)) - (e.computed?.expectedIncome ?? 0)),
     }),
-    { expectedIncome: 0, cashTotal: 0, electronicCashTotal: 0 },
+    { expectedIncome: 0, cashTotal: 0, electronicCashTotal: 0, totalDeductions: 0, variance: 0 },
   );
   const grandCollected = grandTotals.cashTotal + grandTotals.electronicCashTotal;
-  const grandVariance = grandCollected - grandTotals.expectedIncome;
+  const grandVariance = grandTotals.variance;
 
   const paymentMix = entries.reduce(
     (acc, e) => ({
@@ -364,7 +367,8 @@ export default function AdminDashboardClient() {
       const pos = entry.pos_amount ?? 0;
       const bank = entry.bank_transfer_amount ?? 0;
       const credit = entry.computed?.creditTotal ?? 0;
-      const variance = cash + pos + bank - expected;
+      const expenses = entry.computed?.expensesTotal ?? (entry.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0);
+      const variance = entry.computed?.reconciliationDifference ?? cash + pos + bank + credit + expenses - expected;
       return [
         entry.date,
         entry.station,

@@ -38,6 +38,8 @@ function sanitizePayload(input: ShiftEntryPayload): ShiftEntryPayload {
   const electronicCashTotal = toNonNegativeNumber(input.posAmount) + toNonNegativeNumber(input.bankTransferAmount);
   const totalReceived = cashTotal + electronicCashTotal;
   const totalDeductions = expensesTotal + creditTotal;
+  const totalOutstanding = expectedIncome - totalReceived;
+  const reconciliationDifference = totalReceived + totalDeductions - expectedIncome;
 
   return {
     ...input,
@@ -59,7 +61,8 @@ function sanitizePayload(input: ShiftEntryPayload): ShiftEntryPayload {
       expensesTotal,
       creditTotal,
       totalDeductions,
-      totalOutstanding: creditTotal,
+      totalOutstanding,
+      reconciliationDifference,
     },
   };
 }

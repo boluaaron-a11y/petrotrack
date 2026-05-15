@@ -135,15 +135,25 @@ export default function Home() {
 
   const electronicCashTotal = toNumber(posAmount) + toNumber(bankTransferAmount);
   const totalReceived = cashTotal + electronicCashTotal;
-  const totalOutstanding = creditTotal;
+  const totalOutstanding = expectedIncome - totalReceived;
   const totalDeductions = expensesTotal + creditTotal;
+  const reconciliationDifference = totalReceived + totalDeductions - expectedIncome;
+  const isBalanced = Math.abs(reconciliationDifference) < 0.01;
 
   const addCreditSale = () => {
     setCreditSales((prev) => [...prev, { id: createRowId("credit"), clientName: "", amountStr: "0" }]);
   };
 
+  const removeCreditSale = (id: string) => {
+    setCreditSales((prev) => prev.filter((row) => row.id !== id));
+  };
+
   const addExpense = () => {
     setExpenses((prev) => [...prev, { id: createRowId("expense"), name: "", amountStr: "0" }]);
+  };
+
+  const removeExpense = (id: string) => {
+    setExpenses((prev) => prev.filter((row) => row.id !== id));
   };
 
   const submitEntry = async () => {
@@ -181,6 +191,7 @@ export default function Home() {
         creditTotal,
         totalDeductions,
         totalOutstanding,
+        reconciliationDifference,
       },
     };
 
@@ -414,6 +425,16 @@ export default function Home() {
           </div>
           {creditSales.map((item, index) => (
             <div key={item.id} className="space-y-2 rounded-lg bg-slate-50 p-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Credit {index + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => removeCreditSale(item.id)}
+                  className="rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                >
+                  Remove
+                </button>
+              </div>
               <label className="field">
                 <span>Client Name</span>
                 <input
@@ -455,7 +476,18 @@ export default function Home() {
             </button>
           </div>
           {expenses.map((item, index) => (
-            <div key={item.id} className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-2">
+            <div key={item.id} className="rounded-lg bg-slate-50 p-2">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Expense {index + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => removeExpense(item.id)}
+                  className="rounded-lg bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
               <label className="field">
                 <span>Expense Name</span>
                 <input
@@ -481,6 +513,7 @@ export default function Home() {
                   inputMode="decimal"
                 />
               </label>
+              </div>
             </div>
           ))}
           <div className="rounded-lg bg-slate-100 p-2 text-sm font-semibold">
@@ -522,6 +555,18 @@ export default function Home() {
           <p className="mb-2 text-2xl font-bold">{formatCurrency(totalReceived)}</p>
           <p className="text-xs text-slate-300">Total Outstanding</p>
           <p className="mb-3 text-2xl font-bold text-rose-300">{formatCurrency(totalOutstanding)}</p>
+          <div className={`mb-4 rounded-lg p-3 ${isBalanced ? "bg-emerald-500/15 text-emerald-100" : reconciliationDifference > 0 ? "bg-sky-500/15 text-sky-100" : "bg-rose-500/15 text-rose-100"}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-wide opacity-80">
+              {isBalanced ? "Balanced" : reconciliationDifference > 0 ? "Increase" : "Deficit"}
+            </p>
+            <p className="mt-1 text-sm font-semibold">
+              {isBalanced
+                ? "Credit and expenses fully explain the outstanding amount."
+                : reconciliationDifference > 0
+                  ? `${formatCurrency(reconciliationDifference)} above expected. This may be a tip or extra remittance.`
+                  : `${formatCurrency(Math.abs(reconciliationDifference))} unaccounted for. Please review cash, electronic payments, credit, and expenses.`}
+            </p>
+          </div>
           <button
             disabled={isSaving || !user}
             onClick={submitEntry}

@@ -46,6 +46,7 @@ export type ShiftEntryRecord = {
     creditTotal: number;
     totalDeductions?: number;
     totalOutstanding: number;
+    reconciliationDifference?: number;
   };
 };
 export type ShiftEntryPayload = {
@@ -74,5 +75,6 @@ export type ShiftEntryPayload = {
     creditTotal: number;
     totalDeductions: number;
     totalOutstanding: number;
+    reconciliationDifference: number;
   };
 };
