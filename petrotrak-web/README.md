@@ -33,7 +33,9 @@ Open `http://localhost:3000`.
 	 - `XANO_BASE_URL`
 	 - `XANO_API_KEY` (optional)
 	 - `XANO_USER_ENDPOINT`
-	 - `XANO_SHIFT_ENTRIES_ENDPOINT`
+	 - `XANO_SHIFT_ENTRIES_ENDPOINT` (defaults to `/shift_entries`)
+
+When `XANO_BASE_URL` is set, submitted shift entries are posted to Xano. Without it, the app uses local sample storage for development.
 
 If these are missing, the app automatically uses sample mode.
 

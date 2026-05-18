@@ -623,7 +623,7 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-lg font-bold">Successf. Data has been sent to Admin</h3>
+            <h3 className="text-lg font-bold">Successful. Data has been sent to Admin</h3>
             <p className="mt-1 text-sm text-slate-600">
               Submission channel: {successSource}.
             </p>

@@ -3,14 +3,14 @@ type XanoRequestOptions = {
   body?: unknown;
 };
 
-const baseUrl = process.env.XANO_BASE_URL;
-const apiKey = process.env.XANO_API_KEY;
-
 export function hasXanoConfig(): boolean {
-  return Boolean(baseUrl);
+  return Boolean(process.env.XANO_BASE_URL);
 }
 
 export async function xanoRequest<T>(endpoint: string, options: XanoRequestOptions = {}): Promise<T> {
+  const baseUrl = process.env.XANO_BASE_URL;
+  const apiKey = process.env.XANO_API_KEY;
+
   if (!baseUrl) {
     throw new Error("Missing XANO_BASE_URL. Add it in .env.local.");
   }
@@ -24,7 +24,9 @@ export async function xanoRequest<T>(endpoint: string, options: XanoRequestOptio
     headers.Authorization = `Bearer ${apiKey}`;
   }
 
-  const response = await fetch(`${baseUrl}${endpoint}`, {
+  const url = endpoint.startsWith("http") ? endpoint : `${baseUrl}${endpoint}`;
+
+  const response = await fetch(url, {
     method,
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
