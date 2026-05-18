@@ -13,6 +13,7 @@ const TEST_PHONES = new Set([
   "+2340000000005",
 ]);
 const TEST_OTP = "000000";
+const allowTestOtp = process.env.NODE_ENV !== "production";
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\s+/g, "").trim();
@@ -22,7 +23,7 @@ async function resolveUserFromPhone(phone: string): Promise<UserProfile | null> 
   if (process.env.XANO_AUTH_BY_PHONE_ENDPOINT) {    const endpoint = process.env.XANO_AUTH_BY_PHONE_ENDPOINT;
     const baseUrl = process.env.XANO_BASE_URL;
     if (!baseUrl) {
-      throw new Error("Missing XANO_BASE_URL");
+      throw new Error("Missing backend configuration");
     }
 
     const response = await fetch(`${baseUrl}${endpoint}`, {
@@ -61,7 +62,7 @@ async function resolveUserFromPhone(phone: string): Promise<UserProfile | null> 
   }
 
   // Sample mode — use test profile if available, otherwise generic attendant.
-  const testProfile = TEST_PHONE_PROFILES[phone];
+  const testProfile = allowTestOtp ? TEST_PHONE_PROFILES[phone] : undefined;
   if (testProfile) {
     return { id: `usr_${phone}`, ...testProfile };
   }
@@ -74,11 +75,11 @@ async function resolveUserFromPhone(phone: string): Promise<UserProfile | null> 
   };
 }
 const TEST_PHONE_PROFILES: Record<string, Omit<UserProfile, "id">> = {
-  "+2340000000001": { fullName: "Super Admin (Test)",  station: "okigwe", roles: ["super_admin", "admin", "manager"] },
-  "+2340000000002": { fullName: "Okigwe Manager (Test)", station: "okigwe", roles: ["manager"] },
-  "+2340000000003": { fullName: "Branch Admin (Test)",  station: "okigwe", roles: ["admin"] },
-  "+2340000000004": { fullName: "Okigwe Attendant (Test)", station: "okigwe", roles: ["attendant"] },
-  "+2340000000005": { fullName: "Mokwa Attendant (Test)",  station: "mokwa",   roles: ["attendant"] },
+  "+2340000000001": { fullName: "Super Admin",  station: "okigwe", roles: ["super_admin", "admin", "manager"] },
+  "+2340000000002": { fullName: "Okigwe Manager", station: "okigwe", roles: ["manager"] },
+  "+2340000000003": { fullName: "Branch Admin",  station: "okigwe", roles: ["admin"] },
+  "+2340000000004": { fullName: "Okigwe Attendant", station: "okigwe", roles: ["attendant"] },
+  "+2340000000005": { fullName: "Mokwa Attendant",  station: "mokwa",   roles: ["attendant"] },
 };
 
 export async function POST(request: Request) {
@@ -87,16 +88,15 @@ export async function POST(request: Request) {
   const code = (body.code ?? "").trim();
 
   if (!phone || !code) {
-    return NextResponse.json({ ok: false, error: "Phone and OTP code are required" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Phone and passcode are required" }, { status: 400 });
   }
 
-  // Test phones bypass the in-memory OTP store (won't survive across serverless invocations)
-  const otpValid = TEST_PHONES.has(phone)
+  const otpValid = allowTestOtp && TEST_PHONES.has(phone)
     ? code === TEST_OTP
     : verifyOtp(phone, code);
 
   if (!otpValid) {
-    return NextResponse.json({ ok: false, error: "Invalid or expired OTP" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "Invalid or expired passcode" }, { status: 401 });
   }
 
   const user = await resolveUserFromPhone(phone);

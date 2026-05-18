@@ -68,7 +68,6 @@ export default function Home() {
   const [saveMessage, setSaveMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successSource, setSuccessSource] = useState("");
 
   useEffect(() => {
     const loadUser = async () => {
@@ -208,10 +207,13 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
+        if (response.status === 409) {
+          throw new Error(data.error ?? "An entry already exists for this pump or attendant on this date and shift.");
+        }
+
         throw new Error(data.error ?? "Failed to save shift entry");
       }
 
-      setSuccessSource(String(data.source ?? "server"));
       setShowSuccessModal(true);
       setSaveMessage("");
     } catch (error) {
@@ -625,7 +627,7 @@ export default function Home() {
             </div>
             <h3 className="text-lg font-bold">Successful. Data has been sent to Admin</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Submission channel: {successSource}.
+              The admin dashboard can now load this submission.
             </p>
             <button
               type="button"

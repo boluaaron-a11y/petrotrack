@@ -12,7 +12,7 @@ export async function xanoRequest<T>(endpoint: string, options: XanoRequestOptio
   const apiKey = process.env.XANO_API_KEY;
 
   if (!baseUrl) {
-    throw new Error("Missing XANO_BASE_URL. Add it in .env.local.");
+    throw new Error("Missing backend configuration.");
   }
 
   const method = options.method ?? "GET";
@@ -35,7 +35,7 @@ export async function xanoRequest<T>(endpoint: string, options: XanoRequestOptio
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(`Xano request failed (${response.status}): ${message}`);
+    throw new Error(`Backend request failed (${response.status}): ${message}`);
   }
 
   return (await response.json()) as T;

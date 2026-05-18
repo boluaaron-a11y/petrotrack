@@ -41,6 +41,16 @@ export function saveLocalShiftEntry(payload: ShiftEntryPayload): ShiftEntryRecor
   return record;
 }
 
+export function deleteLocalShiftEntry(id: number): boolean {
+  const index = shiftEntries.findIndex((entry) => entry.id === id);
+  if (index === -1) {
+    return false;
+  }
+
+  shiftEntries.splice(index, 1);
+  return true;
+}
+
 export function getLocalShiftEntries(filters: ShiftEntryFilters = {}): ShiftEntryRecord[] {
   return shiftEntries.filter((entry) => {
     if (filters.date && entry.date !== filters.date) return false;

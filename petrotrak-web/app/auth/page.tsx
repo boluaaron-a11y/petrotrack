@@ -24,19 +24,13 @@ export default function AuthPage() {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        throw new Error(data.error ?? "Failed to send OTP");
+        throw new Error(data.error ?? "Failed to send passcode");
       }
 
       setOtpSent(true);
-      if (data.testOtp) {
-        setMessage(`Test OTP: ${data.testOtp}`);
-      } else if (data.devOtp) {
-        setMessage(`Dev OTP: ${data.devOtp}`);
-      } else {
-        setMessage("OTP sent to your phone number");
-      }
+      setMessage("Passcode sent to your phone number");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Failed to send OTP");
+      setMessage(error instanceof Error ? error.message : "Failed to send passcode");
     } finally {
       setLoading(false);
     }
@@ -56,13 +50,13 @@ export default function AuthPage() {
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
-        throw new Error(data.error ?? "OTP verification failed");
+        throw new Error(data.error ?? "Passcode verification failed");
       }
 
       router.replace("/");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "OTP verification failed");
+      setMessage(error instanceof Error ? error.message : "Passcode verification failed");
     } finally {
       setLoading(false);
     }
@@ -90,7 +84,7 @@ export default function AuthPage() {
 
           {otpSent && (
             <label className="block text-sm font-medium text-slate-700">
-              OTP Code
+              Passcode
               <input
                 type="text"
                 value={code}
@@ -107,7 +101,7 @@ export default function AuthPage() {
             disabled={loading}
             className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
           >
-            {loading ? "Please wait..." : otpSent ? "Verify and Continue" : "Send OTP"}
+            {loading ? "Please wait..." : otpSent ? "Verify and Continue" : "Send Passcode"}
           </button>
 
           {otpSent && (

@@ -219,7 +219,7 @@ async function managementRequest<T>(endpoint: string, options: RequestOptions = 
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Xano request failed (${response.status}): ${text}`);
+      throw new Error(`Backend request failed (${response.status}): ${text}`);
     }
 
     return (await response.json()) as T;

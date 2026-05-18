@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { computeCashTotal, computeCreditAmounts, computeExpectedIncome, computeQuantitySold } from "@/lib/calculations";
 import { getSessionFromRequest, hasAnyRole } from "@/lib/auth";
-import { getLocalShiftEntries, saveLocalShiftEntry } from "@/lib/shiftEntryStore";
+import { deleteLocalShiftEntry, getLocalShiftEntries, saveLocalShiftEntry } from "@/lib/shiftEntryStore";
 import { ShiftEntryPayload, ShiftEntryRecord } from "@/lib/types";
 import { hasXanoConfig, xanoRequest } from "@/lib/xano";
 
@@ -89,18 +89,18 @@ function toXanoShiftEntry(payload: ShiftEntryPayload) {
   return {
     date: payload.date,
     station: payload.station,
-    pump_number: payload.pumpNumber,
+    pumpNumber: payload.pumpNumber,
     shift: payload.shift,
-    attendant_id: payload.attendantId,
-    attendant_name: payload.attendantName,
-    opening_liters: payload.openingLiters,
-    closing_liters: payload.closingLiters,
-    price_per_liter: payload.pricePerLiter,
-    tank_dip_liters: payload.tankDipLiters,
-    cash_counts: payload.cashCounts,
-    pos_amount: payload.posAmount,
-    bank_transfer_amount: payload.bankTransferAmount,
-    credit_sales: payload.creditSales,
+    attendantId: payload.attendantId,
+    attendantName: payload.attendantName,
+    openingLiters: payload.openingLiters,
+    closingLiters: payload.closingLiters,
+    pricePerLiter: payload.pricePerLiter,
+    tankDipLiters: payload.tankDipLiters,
+    cashCounts: payload.cashCounts,
+    posAmount: payload.posAmount,
+    bankTransferAmount: payload.bankTransferAmount,
+    creditSales: payload.creditSales,
     expenses: payload.expenses,
     computed: payload.computed,
   };
@@ -154,6 +154,28 @@ function normalizeXanoShiftEntries(payload: unknown): ShiftEntryRecord[] {
       : [];
 
   return records.map((record) => normalizeXanoShiftEntry(record as XanoShiftEntryRecord));
+}
+
+function findDuplicateEntry(records: ShiftEntryRecord[], payload: ShiftEntryPayload): ShiftEntryRecord | undefined {
+  return records.find((record) => (
+    record.date === payload.date &&
+    record.station === payload.station &&
+    record.shift === payload.shift &&
+    (
+      record.pump_number === payload.pumpNumber ||
+      record.attendant_id === payload.attendantId
+    )
+  ));
+}
+
+async function getExistingEntriesForPayload(payload: ShiftEntryPayload): Promise<ShiftEntryRecord[]> {
+  if (hasXanoConfig()) {
+    const params = new URLSearchParams({ date: payload.date, station: payload.station });
+    const records = await xanoRequest<unknown>(`${SHIFT_ENTRIES_ENDPOINT}?${params.toString()}`);
+    return normalizeXanoShiftEntries(records);
+  }
+
+  return getLocalShiftEntries({ date: payload.date, station: payload.station });
 }
 
 export async function GET(request: Request) {
@@ -222,6 +244,23 @@ export async function POST(request: Request) {
   const sanitizedPayload = sanitizePayload(payload);
 
   try {
+    const duplicate = findDuplicateEntry(await getExistingEntriesForPayload(sanitizedPayload), sanitizedPayload);
+    if (duplicate) {
+      const reason = duplicate.pump_number === sanitizedPayload.pumpNumber
+        ? `Pump ${sanitizedPayload.pumpNumber}`
+        : sanitizedPayload.attendantName || "This attendant";
+
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "DUPLICATE_SHIFT_ENTRY",
+          error: `${reason} already has an entry for this date and shift. Change the pump, shift, date, or ask an admin to delete the existing entry before resubmitting.`,
+          duplicate,
+        },
+        { status: 409 },
+      );
+    }
+
     if (hasXanoConfig()) {
       const saved = await xanoRequest<unknown>(SHIFT_ENTRIES_ENDPOINT, {
         method: "POST",
@@ -249,4 +288,43 @@ export async function POST(request: Request) {
     source: "sample",
     record: saveLocalShiftEntry(sanitizedPayload),
   });
+}
+
+export async function DELETE(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!hasAnyRole(session, ["super_admin", "admin", "manager"])) {
+    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = Number(searchParams.get("id"));
+  if (!Number.isFinite(id) || id <= 0) {
+    return NextResponse.json({ ok: false, error: "Valid entry id is required." }, { status: 400 });
+  }
+
+  try {
+    if (hasXanoConfig()) {
+      await xanoRequest(`${SHIFT_ENTRIES_ENDPOINT}/${id}`, { method: "DELETE" });
+      return NextResponse.json({ ok: true });
+    }
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Delete is not available until the shift-entry delete endpoint is added to the backend.",
+      },
+      { status: 501 },
+    );
+  }
+
+  const deleted = deleteLocalShiftEntry(id);
+  if (!deleted) {
+    return NextResponse.json({ ok: false, error: "Entry not found." }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

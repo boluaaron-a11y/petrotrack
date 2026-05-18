@@ -36,9 +36,13 @@ function getUserViewLabel(user: UserProfile | null): string {
 function SectionTable({
   label,
   entries,
+  productByPump,
+  onDeleteEntry,
 }: {
   readonly label: string;
   readonly entries: ShiftEntryRecord[];
+  readonly productByPump: Record<number, PumpProduct>;
+  readonly onDeleteEntry: (entry: ShiftEntryRecord) => void;
 }) {
   const totals = entries.reduce(
     (acc, e) => ({
@@ -67,6 +71,7 @@ function SectionTable({
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <th className="px-4 py-3 text-left">Pump #</th>
+                <th className="px-4 py-3 text-left">Product</th>
                 <th className="px-4 py-3 text-left">Attendant</th>
                 <th className="px-4 py-3 text-left">Shift</th>
                 <th className="px-4 py-3 text-right">Sales Made</th>
@@ -74,6 +79,7 @@ function SectionTable({
                 <th className="px-4 py-3 text-right">Electronic Cash</th>
                 <th className="px-4 py-3 text-right">Deductions</th>
                 <th className="px-4 py-3 text-right">Variance</th>
+                <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -87,12 +93,18 @@ function SectionTable({
                   const totalDeductions = entry.computed?.totalDeductions ?? (entry.computed?.creditTotal ?? 0) + (entry.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0);
                   const variance = entry.computed?.reconciliationDifference ?? cash + electronicCash + totalDeductions - expected;
                   const isPositive = variance >= 0;
+                  const product = productByPump[entry.pump_number];
 
                   return (
                     <tr key={entry.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50">
                       <td className="px-4 py-3">
                         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
                           {entry.pump_number}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                          {product ?? "Not set"}
                         </span>
                       </td>
                       <td className="px-4 py-3 font-medium text-slate-800">
@@ -110,13 +122,22 @@ function SectionTable({
                         {isPositive ? "+" : ""}
                         {formatCurrency(variance)}
                       </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onDeleteEntry(entry)}
+                          className="rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold">
-                <td colSpan={3} className="px-4 py-3 text-xs uppercase text-slate-500">Section Total</td>
+                <td colSpan={4} className="px-4 py-3 text-xs uppercase text-slate-500">Section Total</td>
                 <td className="px-4 py-3 text-right text-slate-800">{formatCurrency(totals.expectedIncome)}</td>
                 <td className="px-4 py-3 text-right text-slate-800">{formatCurrency(totals.cashTotal)}</td>
                 <td className="px-4 py-3 text-right text-slate-800">{formatCurrency(totals.electronicCashTotal)}</td>
@@ -124,6 +145,7 @@ function SectionTable({
                 <td className={`px-4 py-3 text-right ${totals.cashTotal + totals.electronicCashTotal >= totals.expectedIncome ? "text-emerald-600" : "text-rose-500"}`}>
                   {formatCurrency(totals.cashTotal + totals.electronicCashTotal - totals.expectedIncome)}
                 </td>
+                <td />
               </tr>
             </tfoot>
           </table>
@@ -215,9 +237,13 @@ export default function AdminDashboardClient() {
     try {
       const params = new URLSearchParams({ date: forDate, station });
       const res = await fetch(`/api/shift-entries?${params.toString()}`, { cache: "no-store" });
-      const data = await res.json();
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        records?: ShiftEntryRecord[];
+      };
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed to load entries");
-      setEntries(data.records as ShiftEntryRecord[]);
+      setEntries(data.records ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error loading data");
       setEntries([]);
@@ -228,7 +254,7 @@ export default function AdminDashboardClient() {
 
   useEffect(() => {
     void fetchEntries(date);
-  }, [date, fetchEntries, currentBranchCode]);
+  }, [date, fetchEntries]);
 
   const currentBranchName = formatStationName(currentBranchCode);
   const currentBranch = useMemo(
@@ -241,7 +267,6 @@ export default function AdminDashboardClient() {
     [currentBranchCode, currentBranchName, management.branches, user?.fullName],
   );
   const userViewLabel = getUserViewLabel(user);
-  const isOwnBranch = !canSwitchBranch || currentBranchCode === (user?.station ?? "mokwa");
 
   const section1 = entries.filter((e) => e.shift === "morning");
   const section2 = entries.filter((e) => e.shift === "night");
@@ -328,6 +353,9 @@ export default function AdminDashboardClient() {
   const branchAttendants = management.attendants.filter((attendant) => attendant.branchCode === currentBranchCode);
   const branchPumps = management.pumps.filter((pump) => pump.branchCode === currentBranchCode);
   const branchAssignments = management.assignments.filter((assignment) => assignment.branchCode === currentBranchCode);
+  const productByPump = Object.fromEntries(
+    branchPumps.map((pump) => [pump.pumpNumber ?? pump.id, pump.product]),
+  ) as Record<number, PumpProduct>;
 
   const branchTanks = management.tanks.filter((tank) => tank.branchCode === currentBranchCode);
 
@@ -448,6 +476,33 @@ export default function AdminDashboardClient() {
     });
   };
 
+  const deleteEntry = useCallback(async (entry: ShiftEntryRecord) => {
+    const confirmed = window.confirm(`Delete Pump ${entry.pump_number} ${entry.shift} entry for ${entry.attendant_name}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(`/api/shift-entries?id=${entry.id}`, {
+        method: "DELETE",
+      });
+      const data = (await response.json()) as { ok: boolean; error?: string };
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error ?? "Failed to delete entry");
+      }
+
+      setEntries((current) => current.filter((item) => item.id !== entry.id));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete entry");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f5f7f4_0%,#eef2ec_100%)]">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -455,33 +510,7 @@ export default function AdminDashboardClient() {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700">PetroTrack</p>
             <h1 className="text-lg font-bold text-slate-900">Admin Dashboard</h1>
-            {canSwitchBranch ? (
-              <div className="mt-1.5 flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-500">Viewing branch:</span>
-                <div className="flex gap-1">
-                  {management.branches.map((branch) => (
-                    <button
-                      key={branch.code}
-                      onClick={() => switchBranch(branch.code)}
-                      className={`rounded-full px-3 py-0.5 text-xs font-semibold transition-colors ${
-                        currentBranchCode === branch.code
-                          ? "bg-emerald-700 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {branch.name}
-                    </button>
-                  ))}
-                </div>
-                {isOwnBranch ? null : (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-600 ring-1 ring-amber-200">
-                    Other branch
-                  </span>
-                )}
-              </div>
-            ) : (
-              <p className="mt-1 text-xs text-slate-500">{currentBranch.name}</p>
-            )}
+            <p className="mt-1 text-xs text-slate-500">{currentBranch.name}</p>
           </div>
           <div className="text-right">
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
@@ -688,8 +717,8 @@ export default function AdminDashboardClient() {
                   </div>
                 </div>
 
-                <SectionTable label="Section 1 — Morning Shift (Pumps 1–8)" entries={section1} />
-                <SectionTable label="Section 2 — Night Shift (Pumps 1–8)" entries={section2} />
+                <SectionTable label="Section 1 — Morning Shift (Pumps 1–8)" entries={section1} productByPump={productByPump} onDeleteEntry={deleteEntry} />
+                <SectionTable label="Section 2 — Night Shift (Pumps 1–8)" entries={section2} productByPump={productByPump} onDeleteEntry={deleteEntry} />
               </div>
             )}
           </div>
@@ -732,6 +761,26 @@ export default function AdminDashboardClient() {
                   <h3 className="text-sm font-bold text-slate-900">Super Admin Branch Creation</h3>
                   <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">Scaffolded</span>
                 </div>
+                {canSwitchBranch && (
+                  <div className="mt-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current branch</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {management.branches.map((branch) => (
+                        <button
+                          key={branch.code}
+                          onClick={() => switchBranch(branch.code)}
+                          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                            currentBranchCode === branch.code
+                              ? "bg-emerald-700 text-white"
+                              : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {branch.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="mt-3 grid gap-3 md:grid-cols-[1.3fr_1fr_auto]">
                   <input
                     value={newBranchName}
@@ -751,7 +800,11 @@ export default function AdminDashboardClient() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {management.branches.map((branch) => (
-                    <span key={branch.code} className="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                    <span key={branch.code} className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${
+                      currentBranchCode === branch.code
+                        ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                        : "bg-slate-50 text-slate-600 ring-slate-200"
+                    }`}>
                       {branch.name}
                     </span>
                   ))}
